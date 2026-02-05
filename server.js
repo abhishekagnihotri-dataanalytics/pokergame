@@ -1,8 +1,15 @@
-// server.js
+require("dotenv").config();
+const mongoose = require("mongoose");
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { getHandRank, compareHands } = require('./pokerEvaluator');
+
+/* ===== MongoDB Connection ===== */
+mongoose.connect(process.env.MONGO_URI)
+.then(()=>console.log("✅ MongoDB Connected"))
+.catch(err=>console.error("MongoDB error:", err));
 
 const app = express();
 const server = http.createServer(app);
@@ -13,8 +20,8 @@ app.use(express.static('public'));
 // ===== Poker Game Class =====
 class PokerGame {
     constructor() {
-        this.players = []; // humans
-        this.bots = [];    // bots
+        this.players = [];
+        this.bots = [];
         this.deck = [];
         this.pot = 0;
         this.currentBet = 0;
@@ -142,18 +149,6 @@ io.on('connection', socket=>{
             player.currentBet += amount;
             game.currentBet = player.currentBet;
             game.pot += amount;
-        }
-
-        // Bot AI
-        for(const bot of game.bots){
-            if(!bot.folded && bot.chips>0){
-                const combined = [...bot.hand, ...game.communityCards];
-                const rank = getHandRank(combined).rank;
-                const rand = Math.random();
-                if(rank<=2){ if(rand<0.7) bot.folded=true; else bot.chips-=game.currentBet; }
-                else if(rank<=5){ if(rand<0.5) bot.chips-=game.currentBet; else bot.chips-=Math.min(bot.chips,game.currentBet+50); }
-                else{ if(rand<0.8) bot.chips-=Math.min(bot.chips,game.currentBet+100); else bot.chips-=game.currentBet; }
-            }
         }
 
         const nextPlayer = game.nextTurn();
