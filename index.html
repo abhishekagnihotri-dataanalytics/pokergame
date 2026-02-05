@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multiplayer Poker</title>
+    <style>
+        body { font-family: Arial; }
+        #players { margin-top: 20px; }
+        #gameArea { margin-top: 20px; }
+        .card { display: inline-block; margin: 5px; padding: 10px; border: 1px solid #000; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Multiplayer Poker Game</h1>
+    <input id="playerName" placeholder="Enter your name">
+    <button onclick="joinGame()">Join Game</button>
+    <button onclick="addBot()">Add Bot</button>
+    <button onclick="startGame()">Start Game</button>
+
+    <div id="players">
+        <h3>Players:</h3>
+        <ul id="playerList"></ul>
+    </div>
+
+    <div id="gameArea">
+        <h3>Your Hand:</h3>
+        <div id="hand"></div>
+        <h3>Community Cards:</h3>
+        <div id="community"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        function joinGame() {
+            const name = document.getElementById('playerName').value;
+            if(name) socket.emit('joinGame', name);
+        }
+
+        function addBot() {
+            const botName = prompt("Enter Bot Name");
+            if(botName) socket.emit('addBot', botName);
+        }
+
+        function startGame() {
+            socket.emit('startGame');
+        }
+
+        socket.on('updatePlayers', (players) => {
+            const list = document.getElementById('playerList');
+            list.innerHTML = '';
+            players.forEach(p => {
+                const li = document.createElement('li');
+                li.textContent = p.name + (p.chips ? ` (${p.chips})` : '');
+                list.appendChild(li);
+            });
+        });
+
+        socket.on('dealHands', (hands) => {
+            const handDiv = document.getElementById('hand');
+            handDiv.innerHTML = '';
+            const playerHand = hands.find(h => h.id === socket.id);
+            if(playerHand) {
+                playerHand.hand.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.textContent = `${c.value}${c.suit}`;
+                    handDiv.appendChild(div);
+                });
+            }
+        });
+
+        socket.on('communityCards', (cards) => {
+            const communityDiv = document.getElementById('community');
+            communityDiv.innerHTML = '';
+            cards.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.textContent = `${c.value}${c.suit}`;
+                communityDiv.appendChild(div);
+            });
+        });
+    </script>
+</body>
+</html>
